@@ -12,7 +12,7 @@
     <properties>
       <!-- Connection properties -->
       <property name="jakarta.persistence.jdbc.driver" value="org.sqlite.JDBC" />
-      <property name="jakarta.persistence.jdbc.url" value="jdbc:sqlite:./BaseDatos/ProyectoHospital" />
+      <property name="jakarta.persistence.jdbc.url" value="jdbc:sqlite:./BaseDatos/ProyectoHospital.db" />
       <!-- JPA creates and destroys the schema -->
       <property name="eclipselink.ddl-generation" value="create-tables" />
     </properties>

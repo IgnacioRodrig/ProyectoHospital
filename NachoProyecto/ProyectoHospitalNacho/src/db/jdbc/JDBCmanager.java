@@ -37,6 +37,7 @@ public class JDBCmanager implements DBmanager{
 	private static final int numeroDepartamentosIniciales=10;
 	private static final int numeroHabitacionesIniciales=100;
 	private static final String sqlAddDoctor = "INSERT INTO Doctores(Nombre,NumColegiado,Edad,Sexo,IdDep) VALUES(?,?,?,?,?);";
+	private static final String sqlAddDoctorConID = "INSERT INTO Doctores(Id,Nombre,NumColegiado,Edad,Sexo,IdDep) VALUES(?,?,?,?,?,?);";
 	private static final String sqlAddPaciente = "INSERT INTO Pacientes(Nombre,Edad,Sexo,MotivoIngreso,FechaIngreso,IdDoctor,IdHabitacion) VALUES (?,?,?,?,?,?,?);";
 	private static final String sqlAddEnfermero = "INSERT INTO Enfermeros(Nombre, Edad) VALUES (?,?);";
 	private static final String sqlAddDepartamento = "INSERT INTO Departamentos(Nombre, NumEmpleados) VALUES(?,?);";
@@ -57,6 +58,10 @@ public class JDBCmanager implements DBmanager{
 	private static final String sqlGetEnfermeroById =  "SELECT * FROM Enfermeros WHERE Id=?";
 	private static final String sqlGetPacienteById =  "SELECT * FROM Pacientes WHERE Id=?";
 	private static final String sqlAddEnfPac = "INSERT INTO EnfermerosPacientes (IdEnfermero, IdPaciente) VALUES (?,?);";
+	private static final String sqlBuscarDepartamento = "SELECT * FROM Departamentos;";
+	private static final String sqlBuscarDoctoresDepartamento = "SELECT * FROM Doctores WHERE IdDep=?;";
+	private static final String sqlUpdateDepartamento = "UPDATE Departamentos SET NumEmpleados=? WHERE Id=?;";
+	private static final String sqlBuscarDoctores = "SELECT * FROM Doctores;";
 	
 	@Override
 	public void connect() {
@@ -65,10 +70,11 @@ public class JDBCmanager implements DBmanager{
 			c= DriverManager.getConnection("jdbc:sqlite:" + UBICACION_DB);
 			stmt = c.createStatement();
 			createTablas();
+			inicializarDoctores();
 			inicializarHabitaciones();
 			inicializarDepartamentos();
+			actualizarDoctoresDepartamentos();
 			inicializarPacientes();
-			inicializarDoctores();
 			inicializarEnfermeros();
 			} catch (ClassNotFoundException | SQLException e) {
 			LOGGER.severe("Error al inicializar la base de datos\n" + e.toString());
@@ -77,6 +83,88 @@ public class JDBCmanager implements DBmanager{
 
 
 	
+
+
+
+public void actualizarDoctoresDepartamentos() {
+	ArrayList<Departamentos>dep=buscarDepartamentos();
+	for (int i=1;i<=numeroDepartamentosIniciales;i++) {
+		ArrayList<Doctores> doctores = buscarDoctoresDepartamento(i);
+		updateEmpleadosDep(i,doctores.size());
+		for (int j=0;j<doctores.size();j++) {
+			dep.get(i-1).addDoctores(doctores.get(j));
+	}}
+		
+	}
+
+
+
+
+
+
+private void updateEmpleadosDep(int i, int size) {
+
+	try(PreparedStatement prep= c.prepareStatement(sqlUpdateDepartamento)) {
+		prep.setInt(1,size);
+		prep.setInt(2, i);
+		prep.executeUpdate();
+	} catch (SQLException e1) {
+		e1.printStackTrace();
+	}
+}
+	
+
+
+
+
+
+
+
+public ArrayList<Doctores> buscarDoctoresDepartamento(int i) {
+	ArrayList<Doctores> doctor = new ArrayList<Doctores>();
+	try (PreparedStatement prep=c.prepareStatement(sqlBuscarDoctoresDepartamento)){
+		prep.setInt(1, i);
+		ResultSet rs= prep.executeQuery();
+		while(rs.next()) {
+			int id=rs.getInt("Id");
+			String Nombre= rs.getString("Nombre");
+			int NumColegiado= rs.getInt("NumColegiado");
+			int edad = rs.getInt("Edad");
+			boolean sexo= rs.getBoolean("Sexo");
+			int idDepartamento = rs.getInt("IdDep");
+			Departamentos depar=new Departamentos();
+			depar.setId(idDepartamento);
+			doctor.add(new Doctores(id,Nombre,NumColegiado,edad,sexo,depar));
+			}
+			rs.close();
+	} catch (SQLException e) {
+		LOGGER.warning("Error al buscar doctor por nombre\n" + e.toString());			e.printStackTrace();
+	}
+	return doctor;
+}
+
+
+public ArrayList<Doctores> buscarDoctores() {
+	ArrayList<Doctores> doctor = new ArrayList<Doctores>();
+	try (PreparedStatement prep=c.prepareStatement(sqlBuscarDoctores)){
+		ResultSet rs= prep.executeQuery();
+		while(rs.next()) {
+			int id=rs.getInt("Id");
+			String Nombre= rs.getString("Nombre");
+			int NumColegiado= rs.getInt("NumColegiado");
+			int edad = rs.getInt("Edad");
+			boolean sexo= rs.getBoolean("Sexo");
+			int idDepartamento = rs.getInt("IdDep");
+			Departamentos depar=new Departamentos();
+			depar.setId(idDepartamento);
+			doctor.add(new Doctores(id,Nombre,NumColegiado,edad,sexo,depar));
+			}
+			rs.close();
+	} catch (SQLException e) {
+		LOGGER.warning("Error al buscar doctor por nombre\n" + e.toString());			e.printStackTrace();
+	}
+	return doctor;
+}
 
 
 
@@ -276,6 +364,19 @@ private void addHabitacion(Habitaciones habitacion) {
 			LOGGER.warning("Error al a�adir doctor\n"+ e.toString());
 		}
 	}
+	public void addDoctorConID (Doctores doctor) {
+		try (PreparedStatement prep = c.prepareStatement(sqlAddDoctorConID)){
+			prep.setInt(1, doctor.getId());
+			prep.setString(2,doctor.getNombre());
+			prep.setInt(3,doctor.getNumColegiado());
+			prep.setInt(4, doctor.getEdad());
+			prep.setBoolean(5, doctor.isSexo());
+		    prep.setInt(6,doctor.getDepartamento().getId());
+		    prep.executeUpdate();
+		}catch (SQLException e) {
+			LOGGER.warning("Error al a�adir doctor\n"+ e.toString());
+		}
+	}
 	
 	@Override
 	public boolean updateDoctor(Doctores d) {
@@ -391,7 +492,23 @@ private void addHabitacion(Habitaciones habitacion) {
 		}
 		return enf;
 	}
-
+	public ArrayList<Departamentos> buscarDepartamentos(){
+		ArrayList<Departamentos> dep = new ArrayList<Departamentos>();
+		try( PreparedStatement prep =c.prepareStatement(sqlBuscarDepartamento)){
+			ResultSet rs = prep.executeQuery();
+			while(rs.next()) {
+				int id =rs.getInt("Id");
+				String nombre =rs.getString("Nombre");
+				int numEmple = rs.getInt("NumEmpleados");
+				dep.add(new Departamentos(id,nombre,numEmple));
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return dep;
+	}
 	public ArrayList<Pacientes> buscarPacienteNombre(String paciente) {
 		ArrayList<Pacientes> pac =new ArrayList<Pacientes>();
 		try(PreparedStatement prep =c.prepareStatement(sqlBuscarPacientesNombre)){

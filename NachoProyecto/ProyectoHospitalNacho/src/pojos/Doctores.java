@@ -1,15 +1,35 @@
 package pojos;
 
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
+
+import java.io.Serializable;
+
+import javax.xml.bind.annotation.XmlAccessType;
 
 
-
-public class Doctores{
-
+@XmlRootElement(name= "Doctor")
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(propOrder = {"nombre", "numColegiado", "edad", "sexo"})
+public class Doctores implements Serializable{
+	private static final long serialVersionUID = 6633526622689289021L;
+	
+	@XmlAttribute
 	private int id;
+	@XmlElement
 	private String nombre;
+	@XmlElement
 	private int numColegiado;
+	@XmlElement
 	private int edad;
+	@XmlElement
 	private boolean sexo;
+	
+	@XmlTransient
 	private Departamentos departamento;
 	
 	public Doctores(String nombre, int numColegiado, int edad, boolean sexo, Departamentos departamento) {
@@ -21,7 +41,7 @@ public class Doctores{
 		this.departamento=departamento;
 	}
 	public Doctores() {
-		
+		super();
 	}
 	public Doctores(int id, String nombre, int numColegiado, int edad, boolean sexo, Departamentos departamento) {
 		super();
